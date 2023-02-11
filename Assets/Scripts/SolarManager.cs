@@ -16,7 +16,7 @@ public class SolarManager : MonoBehaviour
     float year = 2020;
     float month = 6;
     float day = 22;
-    float local_hour = 12;
+    float local_hour = 12; // 방위각(정남 기준) 11시:61도, 12시:29도 <- 12:30분 -> 13시:(-)24도, 14시:(-)59도
     float local_min = 0;
 
     // Start is called before the first frame update
@@ -56,11 +56,24 @@ public class SolarManager : MonoBehaviour
             / (Mathf.Cos(d2r * solar_altitude) * Mathf.Cos(d2r * local_latitude));
         float solar_azimuth = r2d * Mathf.Acos(term_2);
 
+        // 오전, 오후 방위각 변화
+        // https://www.pveducation.org/ko/%ED%83%9C%EC%96%91%EA%B4%91/%EB%B0%A9%EC%9C%84%EA%B0%81-azimuth-angle
+        if (hour_angle > 0)
+        {
+            solar_azimuth = -1 * solar_azimuth;
+        }
+
         Debug.Log($"[c] Solar Azimuth {solar_azimuth}");
 
         float y_angle = 90.0f - solar_azimuth;
         float z_angle = solar_altitude;
         float x_angle = 0.0f;
+
+        //float solar_zenith_angle = r2d * Mathf.Acos(Mathf.Sin(d2r * local_latitude) * Mathf.Sin(d2r * solar_declination) + Mathf.Cos(d2r * local_latitude) * Mathf.Cos(d2r * solar_declination) * Mathf.Cos(d2r * hour_angle));
+        //float term_3 = (Mathf.Sin(d2r * solar_declination) * Mathf.Cos(d2r * local_latitude) - Mathf.Cos(d2r * hour_angle) * Mathf.Cos(d2r * solar_declination) * Mathf.Sin(d2r * local_latitude)) / Mathf.Sin(d2r * (90 - solar_altitude));
+        //float solar_azimuth_2 = r2d * Mathf.Acos(term_3);
+
+        //Debug.Log($"[c] solar_zenith_angle {solar_zenith_angle}, solar_azimuth_2 {solar_azimuth_2}");
 
         Quaternion solar_quaternion_y = Quaternion.Euler(0, y_angle, 0);
         Quaternion solar_quaternion_z = Quaternion.Euler(0, 0, z_angle);
