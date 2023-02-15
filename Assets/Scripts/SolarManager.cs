@@ -8,23 +8,36 @@ public class SolarManager : MonoBehaviour
     float r2d = 180.0f / Mathf.PI;
 
     // 서울 위도, 경도
-    float local_latitude = 37.478f;
-    float local_longitude = 127.148f;
+    //float local_latitude = 37.478f;
+    //float local_longitude = 127.148f;
+    // 부산 LCT 위도, 경도
+    float local_latitude = 35.09f;
+    float local_longitude = 129.10f;
     float standard_longitude = 135.0f;
 
     // 날짜, 시간
     float year = 2020;
     float month = 6;
     float day = 22;
-    float local_hour = 12; // 방위각(정남 기준) 11시:61도, 12시:29도 <- 12:30분 -> 13시:(-)24도, 14시:(-)59도
-    float local_min = 0;
+
+    public float local_hour = 12; // 방위각(정남 기준) 11시:61도, 12시:29도 <- 12:30분 -> 13시:(-)24도, 14시:(-)59도
+    public float local_min = 0;
+
+    public float day_of_year = 0; // 2/28: 31 + 28, 6/22: 31 + 29 + 31 + 30 + 31 + 22;
+    public float B = 0.0f;
+    public float EOT = 0.0f;
+
+    // 방위각(y), 고도각(z)
+    public float y_angle = 0;
+    public float z_angle = 0;
+    public float x_angle = 0;
 
     // Start is called before the first frame update
     void Start()
     {
-        float day_of_year = 31 + 29 + 31 + 30 + 31 + 22;
-        float B = (day_of_year - 1) * 360.0f / 365.0f;
-        float EOT = 229.2f * (0.000075f
+        day_of_year = 31 + 28; // 2/28: 31 + 25, 6/22: 31 + 29 + 31 + 30 + 31 + 22;
+        B = (day_of_year - 1) * 360.0f / 365.0f;
+        EOT = 229.2f * (0.000075f
                              + 0.001868f * Mathf.Cos(d2r * B)
                              - 0.032077f * Mathf.Sin(d2r * B)
                              - 0.014615f * Mathf.Cos(d2r * 2 * B)
@@ -32,25 +45,28 @@ public class SolarManager : MonoBehaviour
                              );
 
         Debug.Log($"[c] day_of_year: {day_of_year}, EOT: {EOT}");
+    }
 
-        float local_hour_decimal = local_hour + local_min / 60.0f;
+    void CalDirectionalLight(float local_hour_decimal)
+    {
+        // float local_hour_decimal = local_hour + local_min / 60.0f;
         float delta_longitude = local_longitude - standard_longitude;
         float solar_time_decimal = (local_hour_decimal * 60.0f + 4.0f * delta_longitude + EOT) / 60.0f;
         int solar_time_hour = (int)solar_time_decimal;
         int solar_time_min = (int)(solar_time_decimal * 60.0f) % 60;
         float hour_angle = (local_hour_decimal * 60.0f + 4 * delta_longitude + EOT) / 60.0f * 15.0f - 180.0f;
 
-        Debug.Log($"[c] Solar Time {solar_time_hour}.{solar_time_min}, Hour angle: {hour_angle}");
+        // Debug.Log($"[c] Solar Time {solar_time_hour}.{solar_time_min}, Hour angle: {hour_angle}");
 
-        float solar_declination = 23.45f * Mathf.Sin(d2r * 360.0f/365.0f * (284.0f + day_of_year));
+        float solar_declination = 23.45f * Mathf.Sin(d2r * 360.0f / 365.0f * (284.0f + day_of_year));
 
-        Debug.Log($"[c] Solar Declination {solar_declination}");
+        // Debug.Log($"[c] Solar Declination {solar_declination}");
 
         float term_1 = Mathf.Cos(d2r * local_latitude) * Mathf.Cos(d2r * solar_declination) * Mathf.Cos(d2r * hour_angle)
             + Mathf.Sin(d2r * local_latitude) * Mathf.Sin(d2r * solar_declination);
         float solar_altitude = r2d * Mathf.Asin(term_1);
 
-        Debug.Log($"[c] Solar Altitude {solar_altitude}");
+        // Debug.Log($"[c] Solar Altitude {solar_altitude}");
 
         float term_2 = (Mathf.Sin(d2r * solar_altitude) * Mathf.Sin(d2r * local_latitude) - Mathf.Sin(d2r * solar_declination))
             / (Mathf.Cos(d2r * solar_altitude) * Mathf.Cos(d2r * local_latitude));
@@ -63,15 +79,11 @@ public class SolarManager : MonoBehaviour
             solar_azimuth = -1 * solar_azimuth;
         }
 
-        Debug.Log($"[c] Solar Azimuth {solar_azimuth}");
+        // Debug.Log($"[c] Solar Azimuth {solar_azimuth}");
 
-        float y_angle = 90.0f - solar_azimuth;
-        float z_angle = solar_altitude;
-        float x_angle = 0.0f;
-
-        //float solar_zenith_angle = r2d * Mathf.Acos(Mathf.Sin(d2r * local_latitude) * Mathf.Sin(d2r * solar_declination) + Mathf.Cos(d2r * local_latitude) * Mathf.Cos(d2r * solar_declination) * Mathf.Cos(d2r * hour_angle));
-        //float term_3 = (Mathf.Sin(d2r * solar_declination) * Mathf.Cos(d2r * local_latitude) - Mathf.Cos(d2r * hour_angle) * Mathf.Cos(d2r * solar_declination) * Mathf.Sin(d2r * local_latitude)) / Mathf.Sin(d2r * (90 - solar_altitude));
-        //float solar_azimuth_2 = r2d * Mathf.Acos(term_3);
+        y_angle = 90.0f - solar_azimuth;
+        z_angle = solar_altitude;
+        x_angle = 0.0f;
 
         //Debug.Log($"[c] solar_zenith_angle {solar_zenith_angle}, solar_azimuth_2 {solar_azimuth_2}");
 
@@ -82,7 +94,7 @@ public class SolarManager : MonoBehaviour
         // 일정거리(10)의 좌측벡터(10, 0, 0)으로 태양(Directional Light)의 rotation 계산
         Vector3 base_left_vec = new Vector3(10, 0, 0);
         Vector3 solar_directional_vector = solar_quaternion * base_left_vec;
-        Debug.Log($"[c] Solar Position {solar_directional_vector}");
+        // Debug.Log($"[c] Solar Position {solar_directional_vector}");
 
         GameObject directional_light = GameObject.Find("Directional Light");
 
@@ -93,6 +105,23 @@ public class SolarManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        local_min++;
+        if (local_min >= 60)
+        {
+            local_min = 0.0f;
+            local_hour++;
+        }
 
+        if (local_hour >= 24)
+        {
+            if (local_min >= 35.0f)
+            {
+                local_hour = 0.0f;
+            }
+        }
+
+        float local_hour_decimal = local_hour + local_min / 60.0f;
+
+        CalDirectionalLight(local_hour_decimal);
     }
 }
